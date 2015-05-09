@@ -28,7 +28,6 @@ import atexit
 import threading
 import multiprocessing
 
-from multiprocessing.managers import SyncManager, State
 from darts.lib.utils.lru import SynchronizedLRUDict
 from tblib.decorators import Error
 
@@ -64,6 +63,7 @@ class ParserCache(object):
         self._processes = None
         self._parser_finished_events = {}
         self._start_lock = threading.RLock()
+        self._one_parser_at_the_time_lock = threading.RLock()
 
         # These are here for debugging:
         self._from_LRU = 0.0
@@ -259,7 +259,7 @@ class ParserCache(object):
         """
         hash_string = self.get_cache_key(http_response)
 
-        if not self.should_cache(http_response):
+        with self._one_parser_at_the_time_lock:
             # Just return the document parser, no need to cache
             return self._parse_http_response_in_worker(http_response,
                                                        hash_string)
